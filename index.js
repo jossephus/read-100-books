@@ -1,8 +1,10 @@
 const http = require("http");
 const fs = require("fs");
+const path = require("path");
 const https = require("https");
 const cheerio = require("cheerio");
 const getFileFromUrl = require("@appgeist/get-file-from-url");
+
 
 const goodreadsUrl = "https://www.goodreads.com/list/show/7.Best_Books_of_the_21st_Century"; 
 
@@ -10,10 +12,10 @@ let Book = {
 	/**
 	* Inititalization 
 	**/
-	init : function(which) {
-		this.number = which;
+	init : function(options) {
+		this.options = options;
+		this.createDestinationDirectory()
 		this.doEverything();
-		this.
 
 	} ,
 
@@ -72,7 +74,6 @@ let Book = {
 				protocol.get( url , res => {
 				let data = "";
 				res.on("data" , d =>{ 
-					console.log(d)
 					data += d;
 
 				});
@@ -109,7 +110,7 @@ let Book = {
 				book : book , 
 			}
 		});
-		Book.info = fullBooksInfo[this.number - 1];
+		Book.info = fullBooksInfo[this.options.number - 1];
 
 	} ,
 
@@ -119,7 +120,8 @@ let Book = {
 
 	generateUrlForGenLib : function(data) {
 		Book.libgenurl = `http://gen.lib.rus.ec/fiction/?q=${Book.info.author}+${Book.info.book}&criteria=&language=English&format=epub`;
-	} , 
+	} ,
+
 	/**
 	* Downloads the book from http://gen.lib.rus.ec
 	* @param {fs.dir} a directory where the book will be savedd
@@ -135,14 +137,43 @@ let Book = {
 			$ = cheerio.load(d)
 			let td = $('td#info');
 			let epubLink = $('td#info').find('a').first().attr('href')
+			console.log(path.join(this.options.destination , Book.info.book + Book.info.author + Book.options.number +  ".epub" ))
+			// console.log(this.options.destination + Book.info.book + Book.info.author + Book.options.number +  ".epub")
 			const localFileName = getFileFromUrl({
 				url : epubLink , 
-				file : dir + Book.info.book + Book.info.author + ".epub"
+				file : path.join(this.options.destination , Book.info.book + Book.info.author + Book.options.number +  ".epub" )
 			})
 		})
+	} , 
+
+	/**
+	* Checks( creates ) Destination Folder
+	* Sets it to current working directory if not specified 
+	
+	**/
+
+	createDestinationDirectory : function() {
+		if(!this.options.destination){ 
+			this.options.destination = process.cwd();
+			return;
+		}
+		fs.opendir(this.options.destination , (err , dir) => {
+			if(err) {
+				fs.mkdir(this.destination , { recursive : true} , (err) => {
+					if(err) {
+						console.log(err)
+					}
+				})
+
+			}
+			dir.closeSync()
+		} )
 	}
 
 } 
 
-Book.init(28);
+Book.init({
+	number : 11 ,
+	destination : 'C:\\Users\\HP\\Downloads\\Books\\top100' ,  
+});
 
